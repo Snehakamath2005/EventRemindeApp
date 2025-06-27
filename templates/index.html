@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Event Reminder App</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <h1>Event Reminder</h1>
+
+    <input type="text" id="search" placeholder="Search Events..."><br><br>
+
+    <form id="eventForm">
+        <input type="number" id="id" placeholder="Event ID" required><br>
+        <input type="text" id="title" placeholder="Event Title" required><br>
+        <input type="date" id="date" required><br>
+        <input type="time" id="time" required><br>
+        <textarea id="description" placeholder="Event Description"></textarea><br>
+        <button type="submit">Add Event</button>
+    </form>
+
+    <h2>Next Event Countdown:</h2>
+    <p id="countdown">Loading...</p>
+
+    <h2>Upcoming Events</h2>
+    <ul id="eventList"></ul>
+
+    <script>
+        const form = document.getElementById('eventForm');
+        const eventList = document.getElementById('eventList');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const event = {
+                id: parseInt(document.getElementById('id').value),
+                title: document.getElementById('title').value,
+                date: document.getElementById('date').value,
+                time: document.getElementById('time').value,
+                description: document.getElementById('description').value
+            };
+
+            await fetch('/events', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(event)
+            });
+            loadEvents();
+            form.reset();
+        });
+
+        async function loadEvents() {
+            const res = await fetch('/events');
+            const events = await res.json();
+            eventList.innerHTML = '';
+
+            events.forEach(e => {
+                eventList.innerHTML += `
+                    <li>
+                        ${e.title} - ${e.date} ${e.time} - ${e.description}
+                        <button onclick="deleteEvent(${e.id})">Delete</button>
+                        <button onclick="markCompleted(this)">Mark as Done</button>
+                    </li>`;
+            });
+
+            if (events.length > 0) {
+                const nextEvent = events[0];
+                startCountdown(`${nextEvent.date}T${nextEvent.time}`);
+            } else {
+                document.getElementById('countdown').innerHTML = 'No upcoming events.';
+            }
+        }
+
+        async function deleteEvent(id) {
+            await fetch(`/events/${id}`, {
+                method: 'DELETE'
+            });
+            loadEvents();
+        }
+
+        function markCompleted(btn) {
+            btn.parentElement.style.textDecoration = 'line-through';
+            btn.disabled = true;
+        }
+
+        function startCountdown(eventDateTime) {
+            const countdownEl = document.getElementById('countdown');
+            const target = new Date(eventDateTime).getTime();
+
+            const interval = setInterval(() => {
+                const now = new Date().getTime();
+                const distance = target - now;
+
+                if (distance <= 0) {
+                    countdownEl.innerHTML = "Event Started!";
+                    clearInterval(interval);
+                    return;
+                }
+
+                const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+                countdownEl.innerHTML = `Starts In: ${hours}h ${minutes}m ${seconds}s`;
+            }, 1000);
+        }
+
+        document.getElementById('search').addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            const listItems = eventList.getElementsByTagName('li');
+
+            Array.from(listItems).forEach(item => {
+                item.style.display = item.textContent.toLowerCase().includes(searchTerm) ? 'block' : 'none';
+            });
+        });
+
+        loadEvents();
+    </script>
+</body>
+</html>
