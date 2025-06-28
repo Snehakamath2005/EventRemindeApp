@@ -23,7 +23,7 @@ Static files: Managed via FastAPI
 
 ⚙️ Setup Instructions
 1. Clone the Repository
-git clone https://github.com/Snehakamath2005/EventRemindeApp.git
+git clone "url"
 cd EventRemindeApp
 
 2. Install Dependencies
